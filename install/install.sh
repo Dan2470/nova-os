@@ -592,9 +592,112 @@ print_summary() {
 }
 
 # ═══════════════════════════════════════════════════════════════════
+#  DETECT PIPE MODE
+# ═══════════════════════════════════════════════════════════════════
+detect_pipe() {
+    # Check if stdin is a terminal (interactive) or pipe
+    if [ -t 0 ]; then
+        # Terminal attached - interactive mode
+        INTERACTIVE=1
+    else
+        # Pipe detected - non-interactive mode (needs env vars)
+        INTERACTIVE=0
+    fi
+}
+
+# ═══════════════════════════════════════════════════════════════════
+#  INTERACTIVE SETUP
+# ═══════════════════════════════════════════════════════════════════
+interactive_setup() {
+    echo ""
+    echo -e "${CYAN}══════════════════════════════════════════════════════════${NC}"
+    echo -e "${GREEN}${BOLD}  🚀 Nova-OS Interactive Setup${NC}"
+    echo -e "${CYAN}══════════════════════════════════════════════════════════${NC}"
+    echo ""
+    
+    # Check if running via pipe (stdin not terminal)
+    if [ "$INTERACTIVE" = "0" ]; then
+        echo -e "${YELLOW}⚠️  Detected pipe mode (curl ... | bash)${NC}"
+        echo ""
+        echo "Interactive prompts don't work with pipes."
+        echo ""
+        echo -e "${BOLD}Please run directly:${NC}"
+        echo "  bash <(curl -sSL https://.../install/install.sh)"
+        echo ""
+        echo -e "${BOLD}Or use environment variables:${NC}"
+        echo "  NOVA_BOT_TOKEN='xxx' NOVA_OWNER_ID='123' curl ... | bash"
+        echo ""
+        exit 1
+    fi
+    
+    # Interactive prompts
+    echo -e "${CYAN}Step 1/4: Telegram Bot Token${NC}"
+    echo "Get from @BotFather:"
+    echo "  1. Message @BotFather on Telegram"
+    echo "  2. Send /newbot"
+    echo "  3. Give it a name"
+    echo "  4. Copy the token"
+    echo ""
+    read -rp "Enter Bot Token: " NOVA_BOT_TOKEN
+    
+    if [ -z "$NOVA_BOT_TOKEN" ]; then
+        fail "Bot token is required"
+    fi
+    
+    echo ""
+    echo -e "${CYAN}Step 2/4: Your Telegram User ID${NC}"
+    echo "Get from @userinfobot:"
+    echo "  1. Message @userinfobot on Telegram"
+    echo "  2. It will reply with your ID"
+    echo ""
+    read -rp "Enter Your User ID: " NOVA_OWNER_ID
+    
+    if [ -z "$NOVA_OWNER_ID" ]; then
+        fail "User ID is required"
+    fi
+    
+    echo ""
+    echo -e "${CYAN}Step 3/4: Ollama Model${NC}"
+    echo "Available models:"
+    echo "  1) llama3.2:3b (default, recommended)"
+    echo "  2) gemma3:4b"
+    echo "  3) qwen2.5:3b (Bengali optimized)"
+    echo "  4) Other (specify)"
+    echo ""
+    read -rp "Select [1-4] (default: 1): " model_choice
+    
+    case "${model_choice:-1}" in
+        1|"") MODEL="llama3.2:3b" ;;
+        2) MODEL="gemma3:4b" ;;
+        3) MODEL="qwen2.5:3b" ;;
+        4) read -rp "Enter model name: " MODEL ;;
+        *) MODEL="llama3.2:3b" ;;
+    esac
+    
+    echo ""
+    echo -e "${CYAN}Step 4/4: Auto-start service?${NC}"
+    read -rp "Start bot automatically? [Y/n]: " auto_start
+    case "${auto_start:-y}" in
+        [Yy]*) AUTO_START=1 ;;
+        *) AUTO_START=0 ;;
+    esac
+    
+    # Export for the rest of the script
+    export NOVA_BOT_TOKEN NOVA_OWNER_ID MODEL AUTO_START
+}
+
+# ═══════════════════════════════════════════════════════════════════
 #  MAIN
 # ═══════════════════════════════════════════════════════════════════
 main() {
+    # Detect if running interactively or via pipe
+    detect_pipe
+    
+    # If no env vars set and interactive terminal, run interactive setup
+    if [ -z "${NOVA_BOT_TOKEN:-}" ] && [ "$INTERACTIVE" = "1" ]; then
+        interactive_setup
+    fi
+    
     echo ""
     echo -e "${CYAN}══════════════════════════════════════════════════════════${NC}"
     echo -e "${BOLD}  Nova-OS Auto-Installer${NC}"
