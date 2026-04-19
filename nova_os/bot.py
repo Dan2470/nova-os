@@ -24,6 +24,9 @@ from .commands import CommandHandler
 
 console = Console()
 
+# Version info
+__version__ = "0.1.0"
+
 class NovaOS:
     """Main Nova-OS Agent."""
 
