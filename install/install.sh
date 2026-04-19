@@ -164,7 +164,9 @@ install_nova_os() {
     if [ -d "$INSTALL_DIR/.git" ]; then
         log "Updating existing installation..."
         cd "$INSTALL_DIR"
-        git pull --ff-only 2>/dev/null || warn "Git pull failed — continuing with existing code"
+        # Force reset to match remote (handles history changes)
+        git fetch origin main 2>/dev/null || warn "Git fetch failed"
+        git reset --hard origin/main 2>/dev/null || warn "Git reset failed — continuing with existing code"
     else
         rm -rf "$INSTALL_DIR"
         mkdir -p "$INSTALL_DIR"
